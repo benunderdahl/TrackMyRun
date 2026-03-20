@@ -1,14 +1,16 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "cli": {
-    "packageManager": "npm"
-  },
   "newProjectRoot": "projects",
   "projects": {
-    "Runner-Frontend": {
+    "runtracker-angular": {
       "projectType": "application",
-      "schematics": {},
+      "schematics": {
+        "@schematics/angular:component": {
+          "standalone": true,
+          "style": "none"
+        }
+      },
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
@@ -16,17 +18,14 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/runtracker-angular",
+            "index": "src/index.html",
             "browser": "src/main.ts",
-            "tsConfig": "tsconfig.app.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
-            ],
-            "styles": [
-              "src/styles.css"
-            ]
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.json",
+            "inlineStyleLanguage": "css",
+            "styles": ["src/styles.css"],
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -35,11 +34,6 @@
                   "type": "initial",
                   "maximumWarning": "500kB",
                   "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
                 }
               ],
               "outputHashing": "all"
@@ -56,18 +50,18 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "Runner-Frontend:build:production"
+              "buildTarget": "runtracker-angular:build:production"
             },
             "development": {
-              "buildTarget": "Runner-Frontend:build:development"
+              "buildTarget": "runtracker-angular:build:development"
             }
           },
           "defaultConfiguration": "development"
-        },
-        "test": {
-          "builder": "@angular/build:unit-test"
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
