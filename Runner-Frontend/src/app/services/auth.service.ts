@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { RunningService } from './running.service';
@@ -22,7 +22,7 @@ export class AuthService {
   loading     = signal(false);
   error       = signal<string | null>(null);
 
-  readonly isLoggedIn = () => this.currentUser() !== null;
+  readonly isLoggedIn = computed(() => this.currentUser() !== null);
 
   register(email: string, password: string, name: string): void {
     this.loading.set(true);
