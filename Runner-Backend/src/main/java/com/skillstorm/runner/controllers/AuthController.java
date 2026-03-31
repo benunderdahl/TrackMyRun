@@ -46,26 +46,32 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         try {
-            // Verify credentials against DB first
-            AuthResponse authResponse = authService.login(request);
+            System.out.println("=== LOGIN ATTEMPT: " + request.getEmail());
 
-            // Use AuthenticationManager to create a proper Spring Security auth
+            AuthResponse authResponse = authService.login(request);
+            System.out.println("=== AUTH SERVICE OK");
+
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
                             request.getPassword()));
 
-            // Store in security context
+            System.out.println("=== AUTHENTICATION MANAGER OK: " + authentication.getName());
+
             SecurityContext context = SecurityContextHolder.createEmptyContext();
             context.setAuthentication(authentication);
             SecurityContextHolder.setContext(context);
 
-            // Persist to session
             new HttpSessionSecurityContextRepository()
                     .saveContext(context, httpRequest, httpResponse);
 
+            System.out.println("=== SESSION SAVED OK");
+
             return ResponseEntity.ok(authResponse);
         } catch (Exception e) {
+            System.out.println("=== LOGIN FAILED: " + e.getClass().getName());
+            System.out.println("=== MESSAGE: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid email or password");
         }

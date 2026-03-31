@@ -26,7 +26,8 @@ export class StatsComponent {
 
     if (mode === 'month') {
       return runs.filter(run => {
-        const d = new Date(run.date);
+        const parts = (run.date as string).split('-');
+        const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
         return d.getFullYear() === this.selectedYear() &&
                d.getMonth()    === this.selectedMonth();
       });
@@ -37,7 +38,8 @@ export class StatsComponent {
       const weekEnd   = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
       return runs.filter(run => {
-        const d = new Date(run.date);
+        const parts = (run.date as string).split('-');
+        const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
         return d >= weekStart && d <= weekEnd;
       });
     }
@@ -71,8 +73,10 @@ export class StatsComponent {
   // ── Monthly bar chart ─────────────────────────────────────
   monthlyData = computed(() => {
     const map: Record<string, { month: string; distance: number }> = {};
-    for (const run of this.svc.runs()) { // always use ALL runs for monthly
-      const month = new Date(run.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    for (const run of this.svc.runs()) {
+      const parts = (run.date as string).split('-');
+      const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+      const month = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       if (!map[month]) map[month] = { month, distance: 0 };
       map[month].distance += Number(run.distance);
     }
@@ -86,10 +90,10 @@ export class StatsComponent {
   // ── Weekly bar chart ──────────────────────────────────────
   weeklyData = computed(() => {
     const map: Record<string, { week: string; distance: number }> = {};
-    // Use all runs for all-time mode, filtered for week/month modes
     const runs = this.filterMode() === 'all' ? this.svc.runs() : this.filteredRuns();
     for (const run of runs) {
-      const d = new Date(run.date);
+      const parts = (run.date as string).split('-');
+      const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
       const startOfWeek = new Date(d);
       startOfWeek.setDate(d.getDate() - d.getDay());
       const key = startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -106,11 +110,20 @@ export class StatsComponent {
   // ── Pace trend ────────────────────────────────────────────
   paceData = computed(() =>
     [...this.filteredRuns()]
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a, b) => {
+        const pa = (a.date as string).split('-');
+        const pb = (b.date as string).split('-');
+        return new Date(+pa[0], +pa[1]-1, +pa[2]).getTime() -
+               new Date(+pb[0], +pb[1]-1, +pb[2]).getTime();
+      })
       .slice(-10)
       .map(run => ({
         pace: Number(run.pace),
-        date: new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        date: (() => {
+          const p = (run.date as string).split('-');
+          return new Date(+p[0], +p[1]-1, +p[2])
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        })()
       }))
   );
 
@@ -122,7 +135,7 @@ export class StatsComponent {
     const maxP = Math.max(...paces) + 0.5;
     return data.map((d, i) => ({
       x: 50 + (i / (data.length - 1)) * 530,
-      y: 130 - ((d.pace - minP) / (maxP - minP)) * 120  // scaled for h-160 viewbox
+      y: 130 - ((d.pace - minP) / (maxP - minP)) * 120
     }));
   });
 
@@ -143,7 +156,7 @@ export class StatsComponent {
     const paces = data.map(d => d.pace);
     const minP = Math.min(...paces) - 0.5;
     const maxP = Math.max(...paces) + 0.5;
-    return [0, 1, 2, 3].map(i => {  // 4 labels for smaller chart
+    return [0, 1, 2, 3].map(i => {
       const pace = maxP - (i / 3) * (maxP - minP);
       return this.formatPace(pace);
     });
@@ -269,8 +282,10 @@ export class StatsComponent {
     return d;
   }
 
+  // Returns pixels (max 100px) for bar height
   getBarHeight(value: number, max: number): number {
-    return max > 0 ? Math.max((value / max) * 100, 3) : 3;
+    if (max <= 0) return 4;
+    return Math.max((value / max) * 100, 4);
   }
 
   formatPace(pace: number): string {

@@ -111,14 +111,16 @@
       @if (filterMode() === 'all') {
         <div class="bg-white rounded-lg shadow p-5">
           <h2 class="text-base font-medium text-gray-900 mb-4">Monthly Distance</h2>
-          <div class="flex items-end gap-1 h-32">
+          <!-- ↓ fixed height container, items aligned to bottom -->
+          <div class="flex items-end gap-1" style="height: 110px;">
             @for (item of monthlyData(); track item.month) {
-              <div class="flex-1 flex flex-col items-center gap-1 group">
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <!-- ↓ pixel height instead of % -->
                 <div class="w-full bg-blue-400 rounded-t hover:bg-blue-500 transition-colors cursor-pointer"
-                  [style.height.%]="getBarHeight(item.distance, maxMonthlyDistance())"
+                  [style.height]="getBarHeight(item.distance, maxMonthlyDistance()) + 'px'"
                   [title]="item.month + ': ' + item.distance.toFixed(1) + ' mi'">
                 </div>
-                <span class="text-xs text-gray-400 text-center" style="font-size:10px">{{ item.month }}</span>
+                <span class="text-gray-400 text-center" style="font-size:10px">{{ item.month }}</span>
               </div>
             }
           </div>
@@ -130,19 +132,21 @@
            class="bg-white rounded-lg shadow p-5">
         <h2 class="text-base font-medium text-gray-900 mb-4">Weekly Distance</h2>
         @if (weeklyData().length > 0) {
-          <div class="flex items-end gap-1 h-32">
+          <!-- ↓ fixed height container, items aligned to bottom -->
+          <div class="flex items-end gap-1" style="height: 110px;">
             @for (item of weeklyData(); track item.week) {
-              <div class="flex-1 flex flex-col items-center gap-1 group">
+              <div class="flex-1 flex flex-col items-center gap-1">
+                <!-- ↓ pixel height instead of % -->
                 <div class="w-full bg-green-400 rounded-t hover:bg-green-500 transition-colors cursor-pointer"
-                  [style.height.%]="getBarHeight(item.distance, maxWeeklyDistance())"
+                  [style.height]="getBarHeight(item.distance, maxWeeklyDistance()) + 'px'"
                   [title]="item.week + ': ' + item.distance.toFixed(1) + ' mi'">
                 </div>
-                <span class="text-xs text-gray-400 text-center" style="font-size:10px">{{ item.week }}</span>
+                <span class="text-gray-400 text-center" style="font-size:10px">{{ item.week }}</span>
               </div>
             }
           </div>
         } @else {
-          <div class="h-32 flex items-center justify-center text-gray-400 text-sm">
+          <div class="flex items-center justify-center text-gray-400 text-sm" style="height: 110px;">
             No weekly data for this period
           </div>
         }
