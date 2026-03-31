@@ -2,6 +2,8 @@ import { Injectable, signal, inject, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { RunningService } from './running.service';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 const API = 'http://localhost:8080/api/auth';
 
@@ -14,8 +16,8 @@ export interface AuthUser {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private http   = inject(HttpClient);
-  private router = inject(Router);
+  private http       = inject(HttpClient);
+  private router     = inject(Router);
   private runService = inject(RunningService);
 
   currentUser = signal<AuthUser | null>(null);
@@ -41,27 +43,26 @@ export class AuthService {
     });
   }
 
-login(email: string, password: string): void {
-  this.loading.set(true);
-  this.error.set(null);
-  this.http.post<AuthUser>(`${API}/login`, { email, password },
-    { withCredentials: true }
-  ).subscribe({
-    next: (user) => {
-      this.currentUser.set(user);
-      this.loading.set(false);
-      this.runService.loadAll(); // ← load data after login
-      this.router.navigate(['/']);
-    },
-    error: (e) => {
-      this.error.set(e.error?.message || 'Invalid email or password');
-      this.loading.set(false);
-    }
-  });
-}
+  login(email: string, password: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.http.post<AuthUser>(`${API}/login`, { email, password },
+      { withCredentials: true }
+    ).subscribe({
+      next: (user) => {
+        this.currentUser.set(user);
+        this.loading.set(false);
+        this.runService.loadAll();
+        this.router.navigate(['/']);
+      },
+      error: (e) => {
+        this.error.set(e.error?.message || 'Invalid email or password');
+        this.loading.set(false);
+      }
+    });
+  }
 
   loginWithGoogle(): void {
-    // Redirects to Spring Boot which redirects to Google
     window.location.href = 'http://localhost:8080/oauth2/authorization/google';
   }
 
@@ -85,8 +86,22 @@ login(email: string, password: string): void {
         this.runService.loadAll();
       },
       error: () => {
-        this.currentUser.set(null)
+        this.currentUser.set(null);
       }
     });
+  }
+
+  // ← NEW - used by authGuard to restore session before redirecting
+  restoreSession(): Observable<boolean> {
+    return this.http.get<AuthUser>(`${API}/me`, { withCredentials: true }).pipe(
+      map((user) => {
+        this.currentUser.set(user);
+        this.runService.loadAll();
+        return true;
+      }),
+      catchError(() => {
+        return of(false);
+      })
+    );
   }
 }

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from "@angular/core";
-import { RunningService } from "../../services/running.service";
+import { RunningService } from "./services/running.service";
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
-import { AuthService } from "../../services/auth.service";
+import { AuthService } from "./services/auth.service";
 
 @Component({               
   selector: 'app-root',
@@ -16,7 +16,6 @@ import { AuthService } from "../../services/auth.service";
             <div class="flex items-center gap-3">
               <h1 class="text-2xl font-medium text-gray-900">RunTracker</h1>
             </div>
-            @if (auth.isLoggedIn()) {
             <nav class="flex gap-1">
               <a routerLink="/" routerLinkActive="bg-blue-50 text-blue-600"
                  [routerLinkActiveOptions]="{ exact: true }"
@@ -35,18 +34,7 @@ import { AuthService } from "../../services/auth.service";
                  class="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-gray-600 hover:bg-gray-100">
                 Stats
               </a>
-              
-                <button (click)="auth.logout()"
-                  class="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-gray-600 hover:bg-red-50 hover:text-red-600">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                  </svg>
-                  <span class="hidden sm:inline">Logout</span>
-                </button>
-              
             </nav>
-            }
           </div>
         </div>
       </header>
