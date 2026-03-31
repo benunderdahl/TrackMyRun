@@ -17,7 +17,7 @@ export class StatsComponent {
   selectedMonth = signal(new Date().getMonth());
   selectedWeek  = signal(this.getWeekStart(new Date()));
 
-  // ── Filtered runs (everything derives from this) ─────────
+  // ── Filtered runs ─────────────────────────────────────────
   filteredRuns = computed(() => {
     const mode = this.filterMode();
     const runs = this.svc.runs();
@@ -71,7 +71,7 @@ export class StatsComponent {
   // ── Monthly bar chart ─────────────────────────────────────
   monthlyData = computed(() => {
     const map: Record<string, { month: string; distance: number }> = {};
-    for (const run of this.filteredRuns()) {
+    for (const run of this.svc.runs()) { // always use ALL runs for monthly
       const month = new Date(run.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       if (!map[month]) map[month] = { month, distance: 0 };
       map[month].distance += Number(run.distance);
@@ -86,7 +86,9 @@ export class StatsComponent {
   // ── Weekly bar chart ──────────────────────────────────────
   weeklyData = computed(() => {
     const map: Record<string, { week: string; distance: number }> = {};
-    for (const run of this.filteredRuns()) {
+    // Use all runs for all-time mode, filtered for week/month modes
+    const runs = this.filterMode() === 'all' ? this.svc.runs() : this.filteredRuns();
+    for (const run of runs) {
       const d = new Date(run.date);
       const startOfWeek = new Date(d);
       startOfWeek.setDate(d.getDate() - d.getDay());
@@ -120,7 +122,7 @@ export class StatsComponent {
     const maxP = Math.max(...paces) + 0.5;
     return data.map((d, i) => ({
       x: 50 + (i / (data.length - 1)) * 530,
-      y: 165 - ((d.pace - minP) / (maxP - minP)) * 150
+      y: 130 - ((d.pace - minP) / (maxP - minP)) * 120  // scaled for h-160 viewbox
     }));
   });
 
@@ -132,7 +134,7 @@ export class StatsComponent {
     const pts = this.pacePoints();
     if (!pts.length) return '';
     const linePts = pts.map(p => `${p.x},${p.y}`).join(' L ');
-    return `M${pts[0].x},165 L ${linePts} L${pts[pts.length - 1].x},165 Z`;
+    return `M${pts[0].x},140 L ${linePts} L${pts[pts.length - 1].x},140 Z`;
   });
 
   paceYLabels = computed(() => {
@@ -141,8 +143,8 @@ export class StatsComponent {
     const paces = data.map(d => d.pace);
     const minP = Math.min(...paces) - 0.5;
     const maxP = Math.max(...paces) + 0.5;
-    return [0, 1, 2, 3, 4].map(i => {
-      const pace = maxP - (i / 4) * (maxP - minP);
+    return [0, 1, 2, 3].map(i => {  // 4 labels for smaller chart
+      const pace = maxP - (i / 3) * (maxP - minP);
       return this.formatPace(pace);
     });
   });
@@ -268,7 +270,7 @@ export class StatsComponent {
   }
 
   getBarHeight(value: number, max: number): number {
-    return max > 0 ? Math.max((value / max) * 100, 2) : 2;
+    return max > 0 ? Math.max((value / max) * 100, 3) : 3;
   }
 
   formatPace(pace: number): string {
