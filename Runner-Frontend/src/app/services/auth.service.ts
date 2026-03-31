@@ -91,7 +91,6 @@ export class AuthService {
     });
   }
 
-  // ← NEW - used by authGuard to restore session before redirecting
   restoreSession(): Observable<boolean> {
     return this.http.get<AuthUser>(`${API}/me`, { withCredentials: true }).pipe(
       map((user) => {
