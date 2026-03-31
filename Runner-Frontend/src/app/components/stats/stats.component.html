@@ -104,18 +104,16 @@
     </div>
   } @else {
 
-    <!-- Distance Bar Charts — side by side -->
+    <!-- Row 1: Monthly + Scatter -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- Monthly (All Time only) -->
+      <!-- Monthly Distance (All Time only) -->
       @if (filterMode() === 'all') {
         <div class="bg-white rounded-lg shadow p-5">
           <h2 class="text-base font-medium text-gray-900 mb-4">Monthly Distance</h2>
-          <!-- ↓ fixed height container, items aligned to bottom -->
           <div class="flex items-end gap-1" style="height: 110px;">
             @for (item of monthlyData(); track item.month) {
               <div class="flex-1 flex flex-col items-center gap-1">
-                <!-- ↓ pixel height instead of % -->
                 <div class="w-full bg-blue-400 rounded-t hover:bg-blue-500 transition-colors cursor-pointer"
                   [style.height]="getBarHeight(item.distance, maxMonthlyDistance()) + 'px'"
                   [title]="item.month + ': ' + item.distance.toFixed(1) + ' mi'">
@@ -127,34 +125,66 @@
         </div>
       }
 
-      <!-- Weekly -->
+      <!-- Pace vs Distance Scatter -->
       <div [class]="filterMode() === 'all' ? '' : 'lg:col-span-2'"
            class="bg-white rounded-lg shadow p-5">
-        <h2 class="text-base font-medium text-gray-900 mb-4">Weekly Distance</h2>
-        @if (weeklyData().length > 0) {
-          <!-- ↓ fixed height container, items aligned to bottom -->
-          <div class="flex items-end gap-1" style="height: 110px;">
-            @for (item of weeklyData(); track item.week) {
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <!-- ↓ pixel height instead of % -->
-                <div class="w-full bg-green-400 rounded-t hover:bg-green-500 transition-colors cursor-pointer"
-                  [style.height]="getBarHeight(item.distance, maxWeeklyDistance()) + 'px'"
-                  [title]="item.week + ': ' + item.distance.toFixed(1) + ' mi'">
-                </div>
-                <span class="text-gray-400 text-center" style="font-size:10px">{{ item.week }}</span>
-              </div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-medium text-gray-900">Pace vs Distance</h2>
+          @if (paceDistanceCorrelation() !== null) {
+            @if (paceDistanceCorrelation()! > 0.3) {
+              <span class="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded-full">
+                Longer runs → slower pace
+              </span>
+            } @else if (paceDistanceCorrelation()! < -0.3) {
+              <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                Longer runs → faster pace
+              </span>
+            } @else {
+              <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                No clear pattern
+              </span>
             }
+          }
+        </div>
+        @if (scatterPoints().length > 1) {
+          <svg class="w-full" viewBox="0 0 600 160" preserveAspectRatio="xMidYMid meet">
+            @for (i of [0,1,2,3]; track i) {
+              <line x1="50" [attr.y1]="10 + i * 40" x2="570" [attr.y2]="10 + i * 40"
+                stroke="#f3f4f6" stroke-width="1" stroke-dasharray="4,4"/>
+            }
+            <line x1="50" y1="10" x2="50" y2="130" stroke="#e5e7eb" stroke-width="1"/>
+            <line x1="50" y1="130" x2="570" y2="130" stroke="#e5e7eb" stroke-width="1"/>
+            @for (label of scatterYLabels(); track $index) {
+              <text x="45" [attr.y]="14 + $index * 40" text-anchor="end"
+                font-size="9" fill="#9ca3af">{{ label }}</text>
+            }
+            @for (label of scatterXLabels(); track $index) {
+              <text [attr.x]="50 + $index * 127.5" y="148" text-anchor="middle"
+                font-size="9" fill="#9ca3af">{{ label }}mi</text>
+            }
+            @for (pt of scatterPoints(); track $index) {
+              <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4"
+                fill="#3b82f6" fill-opacity="0.6" stroke="#2563eb" stroke-width="1">
+                <title>{{ pt.label }}</title>
+              </circle>
+            }
+          </svg>
+          <div class="flex justify-between mt-1 px-12">
+            <span style="font-size:10px" class="text-gray-400">← shorter</span>
+            <span style="font-size:10px" class="text-gray-400 font-medium">Distance (miles)</span>
+            <span style="font-size:10px" class="text-gray-400">longer →</span>
           </div>
         } @else {
           <div class="flex items-center justify-center text-gray-400 text-sm" style="height: 110px;">
-            No weekly data for this period
+            Log at least 2 runs to see this chart
           </div>
         }
       </div>
 
     </div>
+    <!-- END Row 1 -->
 
-    <!-- Pace Trend -->
+    <!-- Row 2: Pace Trend -->
     @if (paceData().length > 1) {
       <div class="bg-white rounded-lg shadow p-5">
         <div class="flex items-center justify-between mb-4">
@@ -210,7 +240,7 @@
       </div>
     }
 
-    <!-- Bottom row: Distribution + Shoe Usage -->
+    <!-- Row 3: Distribution + Shoe Usage -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- Distance Distribution -->
@@ -256,6 +286,8 @@
       }
 
     </div>
+    <!-- END Row 3 -->
 
   }
+
 </div>
