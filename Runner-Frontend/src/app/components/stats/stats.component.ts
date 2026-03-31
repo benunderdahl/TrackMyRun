@@ -1,155 +1,126 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RunningService } from '../../services/running.service';
+
+type FilterMode = 'all' | 'week' | 'month';
 
 @Component({
   selector: 'app-stats',
   standalone: true,
-  template: `
-    <div class="space-y-8">
-      <h1 class="text-3xl text-gray-900">Statistics</h1>
-
-      <!-- Quick Stats -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Total Distance</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ totalDistance().toFixed(1) }}</p>
-          <p class="text-gray-600 text-xs mt-1">miles</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Total Runs</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ svc.runs().length }}</p>
-          <p class="text-gray-600 text-xs mt-1">activities</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Avg Distance</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ avgDistance().toFixed(1) }}</p>
-          <p class="text-gray-600 text-xs mt-1">miles</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Avg Pace</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ formatPace(svc.averagePace()) }}</p>
-          <p class="text-gray-600 text-xs mt-1">per mile</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Longest Run</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ longestRun().toFixed(1) }}</p>
-          <p class="text-gray-600 text-xs mt-1">miles</p>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-          <p class="text-gray-500 text-sm">Fastest Pace</p>
-          <p class="text-2xl text-gray-900 mt-1">{{ fastestPace() > 0 ? formatPace(fastestPace()) : '--' }}</p>
-          <p class="text-gray-600 text-xs mt-1">per mile</p>
-        </div>
-      </div>
-
-      @if (svc.runs().length > 0) {
-        <!-- Monthly Distance Bar Chart -->
-        @if (monthlyData().length > 0) {
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl text-gray-900 mb-6">Monthly Distance</h2>
-            <div class="flex items-end gap-3 h-48">
-              @for (item of monthlyData(); track item.month) {
-                <div class="flex-1 flex flex-col items-center gap-2">
-                  <span class="text-xs text-gray-500">{{ item.distance.toFixed(0) }}mi</span>
-                  <div class="w-full bg-blue-500 rounded-t transition-all"
-                    [style.height.%]="getBarHeight(item.distance, maxMonthlyDistance())">
-                  </div>
-                  <span class="text-xs text-gray-500 text-center leading-tight">{{ item.month }}</span>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- Pace Trend Line Chart -->
-        @if (paceData().length > 1) {
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl text-gray-900 mb-6">Recent Pace Trend</h2>
-            <div class="relative h-48">
-              <svg class="w-full h-full" viewBox="0 0 400 160" preserveAspectRatio="none">
-                <polyline
-                  [attr.points]="pacePolyline()"
-                  fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linejoin="round"/>
-                @for (pt of pacePoints(); track $index) {
-                  <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4" fill="#8b5cf6"/>
-                }
-              </svg>
-              <div class="flex justify-between mt-2">
-                @for (item of paceData(); track $index) {
-                  <span class="text-xs text-gray-500">{{ item.date }}</span>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Shoe Usage Horizontal Bar Chart -->
-        @if (shoeStats().length > 0) {
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl text-gray-900 mb-6">Shoe Usage</h2>
-            <div class="space-y-4">
-              @for (shoe of shoeStats(); track shoe.name) {
-                <div class="flex items-center gap-4">
-                  <span class="text-sm text-gray-600 w-44 truncate">{{ shoe.name }}</span>
-                  <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
-                    <div class="bg-emerald-500 h-full rounded-full transition-all"
-                      [style.width.%]="(shoe.miles / maxShoeMiles()) * 100">
-                    </div>
-                  </div>
-                  <span class="text-sm text-gray-700 w-16 text-right">{{ shoe.miles }} mi</span>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      } @else {
-        <div class="bg-white rounded-lg shadow p-12 text-center">
-          <p class="text-gray-500">No data available yet. Start logging runs to see statistics!</p>
-        </div>
-      }
-    </div>
-  `
+  templateUrl: './stats.component.html'
 })
 export class StatsComponent {
   svc = inject(RunningService);
 
-  totalDistance = computed(() => this.svc.runs().reduce((s, r) => s + r.distance, 0));
-  avgDistance = computed(() => this.svc.runs().length ? this.totalDistance() / this.svc.runs().length : 0);
-  longestRun = computed(() => this.svc.runs().length ? Math.max(...this.svc.runs().map(r => r.distance)) : 0);
-  fastestPace = computed(() => this.svc.runs().length ? Math.min(...this.svc.runs().map(r => r.pace)) : 0);
+  // ── Filter state ─────────────────────────────────────────
+  filterMode    = signal<FilterMode>('all');
+  selectedYear  = signal(new Date().getFullYear());
+  selectedMonth = signal(new Date().getMonth());
+  selectedWeek  = signal(this.getWeekStart(new Date()));
 
-  monthlyData = computed(() => {
-    const map: Record<string, { month: string; distance: number; runs: number }> = {};
-    for (const run of this.svc.runs()) {
-      const month = new Date(run.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      if (!map[month]) map[month] = { month, distance: 0, runs: 0 };
-      map[month].distance += run.distance;
-      map[month].runs++;
+  // ── Filtered runs (everything derives from this) ─────────
+  filteredRuns = computed(() => {
+    const mode = this.filterMode();
+    const runs = this.svc.runs();
+
+    if (mode === 'all') return runs;
+
+    if (mode === 'month') {
+      return runs.filter(run => {
+        const d = new Date(run.date);
+        return d.getFullYear() === this.selectedYear() &&
+               d.getMonth()    === this.selectedMonth();
+      });
     }
-    return Object.values(map);
+
+    if (mode === 'week') {
+      const weekStart = this.selectedWeek();
+      const weekEnd   = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      return runs.filter(run => {
+        const d = new Date(run.date);
+        return d >= weekStart && d <= weekEnd;
+      });
+    }
+
+    return runs;
+  });
+
+  // ── Summary stats ─────────────────────────────────────────
+  totalDistance = computed(() =>
+    this.filteredRuns().reduce((s, r) => s + Number(r.distance), 0)
+  );
+
+  avgDistance = computed(() =>
+    this.filteredRuns().length ? this.totalDistance() / this.filteredRuns().length : 0
+  );
+
+  longestRun = computed(() =>
+    this.filteredRuns().length ? Math.max(...this.filteredRuns().map(r => Number(r.distance))) : 0
+  );
+
+  fastestPace = computed(() =>
+    this.filteredRuns().length ? Math.min(...this.filteredRuns().map(r => Number(r.pace))) : 0
+  );
+
+  averagePace = computed(() => {
+    const runs = this.filteredRuns();
+    if (!runs.length) return 0;
+    return runs.reduce((s, r) => s + Number(r.pace), 0) / runs.length;
+  });
+
+  // ── Monthly bar chart ─────────────────────────────────────
+  monthlyData = computed(() => {
+    const map: Record<string, { month: string; distance: number }> = {};
+    for (const run of this.filteredRuns()) {
+      const month = new Date(run.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      if (!map[month]) map[month] = { month, distance: 0 };
+      map[month].distance += Number(run.distance);
+    }
+    return Object.values(map).slice(-6);
   });
 
   maxMonthlyDistance = computed(() =>
     this.monthlyData().length ? Math.max(...this.monthlyData().map(d => d.distance)) : 1
   );
 
+  // ── Weekly bar chart ──────────────────────────────────────
+  weeklyData = computed(() => {
+    const map: Record<string, { week: string; distance: number }> = {};
+    for (const run of this.filteredRuns()) {
+      const d = new Date(run.date);
+      const startOfWeek = new Date(d);
+      startOfWeek.setDate(d.getDate() - d.getDay());
+      const key = startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!map[key]) map[key] = { week: key, distance: 0 };
+      map[key].distance += Number(run.distance);
+    }
+    return Object.values(map).slice(-8);
+  });
+
+  maxWeeklyDistance = computed(() =>
+    this.weeklyData().length ? Math.max(...this.weeklyData().map(d => d.distance)) : 1
+  );
+
+  // ── Pace trend ────────────────────────────────────────────
   paceData = computed(() =>
-    this.svc.runs().slice(0, 10).reverse().map((run, i) => ({
-      run: `Run ${i + 1}`,
-      pace: run.pace,
-      date: new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    }))
+    [...this.filteredRuns()]
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-10)
+      .map(run => ({
+        pace: Number(run.pace),
+        date: new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }))
   );
 
   pacePoints = computed(() => {
     const data = this.paceData();
-    if (!data.length) return [];
+    if (data.length < 2) return [];
     const paces = data.map(d => d.pace);
     const minP = Math.min(...paces) - 0.5;
     const maxP = Math.max(...paces) + 0.5;
     return data.map((d, i) => ({
-      x: (i / (data.length - 1)) * 380 + 10,
-      y: 150 - ((d.pace - minP) / (maxP - minP)) * 130
+      x: 50 + (i / (data.length - 1)) * 530,
+      y: 165 - ((d.pace - minP) / (maxP - minP)) * 150
     }));
   });
 
@@ -157,12 +128,58 @@ export class StatsComponent {
     this.pacePoints().map(p => `${p.x},${p.y}`).join(' ')
   );
 
+  paceFillPath = computed(() => {
+    const pts = this.pacePoints();
+    if (!pts.length) return '';
+    const linePts = pts.map(p => `${p.x},${p.y}`).join(' L ');
+    return `M${pts[0].x},165 L ${linePts} L${pts[pts.length - 1].x},165 Z`;
+  });
+
+  paceYLabels = computed(() => {
+    const data = this.paceData();
+    if (!data.length) return [];
+    const paces = data.map(d => d.pace);
+    const minP = Math.min(...paces) - 0.5;
+    const maxP = Math.max(...paces) + 0.5;
+    return [0, 1, 2, 3, 4].map(i => {
+      const pace = maxP - (i / 4) * (maxP - minP);
+      return this.formatPace(pace);
+    });
+  });
+
+  paceImprovement = computed(() => {
+    const data = this.paceData();
+    if (data.length < 2) return null;
+    return data[data.length - 1].pace - data[0].pace;
+  });
+
+  // ── Distance distribution ─────────────────────────────────
+  distanceDistribution = computed(() => {
+    const buckets = [
+      { label: '< 2 mi',    min: 0,  max: 2,    count: 0 },
+      { label: '2 – 4 mi',  min: 2,  max: 4,    count: 0 },
+      { label: '4 – 6 mi',  min: 4,  max: 6,    count: 0 },
+      { label: '6 – 10 mi', min: 6,  max: 10,   count: 0 },
+      { label: '10+ mi',    min: 10, max: 9999,  count: 0 },
+    ];
+    for (const run of this.filteredRuns()) {
+      const d = Number(run.distance);
+      const bucket = buckets.find(b => d >= b.min && d < b.max);
+      if (bucket) bucket.count++;
+    }
+    return buckets;
+  });
+
+  maxBucketCount = computed(() =>
+    Math.max(...this.distanceDistribution().map(b => b.count), 1)
+  );
+
+  // ── Shoe usage ────────────────────────────────────────────
   shoeStats = computed(() =>
     this.svc.shoes()
       .map(shoe => ({
         name: `${shoe.brand} ${shoe.model}`,
-        miles: parseFloat(shoe.totalMiles.toFixed(1)),
-        runs: this.svc.getRunsForShoe(shoe.id).length
+        miles: Number(shoe.totalMiles)
       }))
       .sort((a, b) => b.miles - a.miles)
   );
@@ -171,14 +188,100 @@ export class StatsComponent {
     this.shoeStats().length ? Math.max(...this.shoeStats().map(s => s.miles)) : 1
   );
 
+  // ── Period labels ─────────────────────────────────────────
+  weekLabel = computed(() => {
+    const start = this.selectedWeek();
+    const end   = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(start)} – ${fmt(end)}`;
+  });
+
+  monthLabel = computed(() =>
+    new Date(this.selectedYear(), this.selectedMonth(), 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  );
+
+  periodLabel = computed(() => {
+    if (this.filterMode() === 'week')  return this.weekLabel();
+    if (this.filterMode() === 'month') return this.monthLabel();
+    return 'All Time';
+  });
+
+  isCurrentPeriod = computed(() => {
+    const now = new Date();
+    if (this.filterMode() === 'month') {
+      return this.selectedYear()  === now.getFullYear() &&
+             this.selectedMonth() === now.getMonth();
+    }
+    return this.selectedWeek().getTime() >= this.getWeekStart(now).getTime();
+  });
+
+  // ── Navigation ────────────────────────────────────────────
+  setMode(mode: FilterMode): void {
+    this.filterMode.set(mode);
+  }
+
+  prevPeriod(): void {
+    if (this.filterMode() === 'month') {
+      if (this.selectedMonth() === 0) {
+        this.selectedMonth.set(11);
+        this.selectedYear.update(y => y - 1);
+      } else {
+        this.selectedMonth.update(m => m - 1);
+      }
+    } else {
+      const prev = new Date(this.selectedWeek());
+      prev.setDate(prev.getDate() - 7);
+      this.selectedWeek.set(prev);
+    }
+  }
+
+  nextPeriod(): void {
+    if (this.filterMode() === 'month') {
+      if (this.selectedMonth() === 11) {
+        this.selectedMonth.set(0);
+        this.selectedYear.update(y => y + 1);
+      } else {
+        this.selectedMonth.update(m => m + 1);
+      }
+    } else {
+      const next = new Date(this.selectedWeek());
+      next.setDate(next.getDate() + 7);
+      this.selectedWeek.set(next);
+    }
+  }
+
+  goToCurrent(): void {
+    const now = new Date();
+    this.selectedYear.set(now.getFullYear());
+    this.selectedMonth.set(now.getMonth());
+    this.selectedWeek.set(this.getWeekStart(now));
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   getBarHeight(value: number, max: number): number {
-    return max > 0 ? (value / max) * 100 : 0;
+    return max > 0 ? Math.max((value / max) * 100, 2) : 2;
   }
 
   formatPace(pace: number): string {
-    if (!pace) return '--';
+    if (!pace || pace <= 0) return '--';
     const minutes = Math.floor(pace);
     const seconds = Math.round((pace - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  formatPaceDiff(diff: number): string {
+    const abs = Math.abs(diff);
+    const minutes = Math.floor(abs);
+    const seconds = Math.round((abs - minutes) * 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 }
